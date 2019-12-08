@@ -5,7 +5,7 @@
   "scripts": {
     "build": "webpack --mode production",
     "dev": "webpack-dev-server --mode development --open",
-    "deploy": "surge --project ./dist --domain rss-face.surge.sh",
+    "deploy": "webpack --mode production && surge --project ./dist --domain rss-face.surge.sh",
     "test": "jest"
   },
   "repository": {
