@@ -5,6 +5,7 @@
   "scripts": {
     "build": "webpack --mode production",
     "dev": "webpack-dev-server --mode development --open",
+    "deploy": "surge --project ./dist --domain rss-face.surge.sh",
     "test": "jest"
   },
   "repository": {
@@ -16,7 +17,7 @@
   "bugs": {
     "url": "https://github.com/victorlitvinenko/frontend-project-lvl3/issues"
   },
-  "homepage": "https://github.com/victorlitvinenko/frontend-project-lvl3#readme",
+  "homepage": "http://rss-face.surge.sh/",
   "jest": {
     "verbose": true,
     "testURL": "http://localhost/"
