@@ -67,6 +67,13 @@ const renderAddField = () => {
   }
 };
 
+const prepareLine = (str) => {
+  const li = document.createElement('li');
+  li.classList.add('list-group-item');
+  li.innerHTML = str;
+  return li;
+};
+
 const renderFeeds = () => {
   const { channels, posts } = state.feedProcess;
   const { channelsContainer, postsContainer } = getDOMElements();
@@ -74,19 +81,13 @@ const renderFeeds = () => {
   channelsUl.id = 'channels';
   channelsUl.classList.add('list-group');
   channels.forEach((channel) => {
-    const li = document.createElement('li');
-    li.classList.add('list-group-item');
-    li.innerHTML = `<strong>${channel.title}</strong>: ${channel.description}`;
-    channelsUl.append(li);
+    channelsUl.append(prepareLine(`<strong>${channel.title}</strong>: ${channel.description}`));
   });
   const postsUl = document.createElement('ul');
   postsUl.id = 'posts';
   postsUl.classList.add('list-group', 'my-3');
   posts.forEach((post) => {
-    const li = document.createElement('li');
-    li.classList.add('list-group-item');
-    li.innerHTML = `<a target="_blank" href="${post.link}">${post.title}</a>`;
-    postsUl.append(li);
+    postsUl.append(prepareLine(`<a target="_blank" href="${post.link}">${post.title}</a>`));
   });
   channelsContainer.replaceWith(channelsUl);
   postsContainer.replaceWith(postsUl);
