@@ -2,7 +2,20 @@ import isURL from 'validator/lib/isURL';
 import axios from 'axios';
 import WatchJS from 'melanke-watchjs';
 
-const renderAddField = (state) => {
+const state = {
+  addProcess: {
+    status: 'idle',
+    url: '',
+    valid: true,
+    visitedUrls: [],
+  },
+  feedProcess: {
+    channels: [],
+    posts: [],
+  },
+};
+
+const renderAddField = () => {
   const input = document.querySelector('#input');
   const addBtn = document.querySelector('#add');
   const spinner = document.querySelector('#spinner');
@@ -33,7 +46,7 @@ const renderAddField = (state) => {
   }
 };
 
-const renderFeeds = (state) => {
+const renderFeeds = () => {
   const { channels, posts } = state.feedProcess;
   const channelsContainer = document.querySelector('#channels');
   const postsContainer = document.querySelector('#posts');
@@ -60,22 +73,9 @@ const renderFeeds = (state) => {
 };
 
 const app = () => {
-  const state = {
-    addProcess: {
-      status: 'idle',
-      url: '',
-      valid: true,
-      visitedUrls: [],
-    },
-    feedProcess: {
-      channels: [],
-      posts: [],
-    },
-  };
-
   const input = document.querySelector('#input');
   const form = document.querySelector('#form');
-  input.addEventListener('change', () => {
+  input.addEventListener('keyup', () => {
     state.addProcess.status = 'idle';
     state.addProcess.url = input.value;
     const { url } = state.addProcess;
@@ -115,10 +115,10 @@ const app = () => {
     }
   });
   WatchJS.watch(state, 'addProcess', () => {
-    renderAddField(state);
+    renderAddField();
   });
   WatchJS.watch(state, 'feedProcess', () => {
-    renderFeeds(state);
+    renderFeeds();
   });
 };
 
