@@ -15,30 +15,51 @@ const state = {
   },
 };
 
-const renderAddField = () => {
+const getDOMElements = () => {
   const input = document.querySelector('#input');
+  const form = document.querySelector('#form');
   const addBtn = document.querySelector('#add');
   const spinner = document.querySelector('#spinner');
   const alert = document.querySelector('#alert');
+  const channelsContainer = document.querySelector('#channels');
+  const postsContainer = document.querySelector('#posts');
+  return {
+    input, form, addBtn, spinner, alert, channelsContainer, postsContainer,
+  };
+};
+
+const toggleAddItems = (alertShow, spinnerShow, inputDisabled) => {
+  const {
+    input, spinner, alert,
+  } = getDOMElements();
+  if (alertShow) {
+    alert.classList.remove('d-none');
+  } else {
+    alert.classList.add('d-none');
+  }
+  if (spinnerShow) {
+    spinner.classList.remove('d-none');
+  } else {
+    spinner.classList.add('d-none');
+  }
+  input.disabled = inputDisabled;
+};
+
+const renderAddField = () => {
+  const { input, addBtn } = getDOMElements();
   const { url, valid, status } = state.addProcess;
   switch (status) {
     case 'error':
-      alert.classList.remove('d-none');
-      spinner.classList.add('d-none');
-      input.disabled = false;
+      toggleAddItems(true, false, false);
       break;
     case 'loading':
-      spinner.classList.remove('d-none');
-      alert.classList.add('d-none');
-      input.disabled = true;
+      toggleAddItems(false, true, true);
       break;
     default:
-      spinner.classList.add('d-none');
-      alert.classList.add('d-none');
-      input.disabled = false;
+      toggleAddItems(false, false, false);
   }
   input.value = url;
-  addBtn.disabled = !valid || url === '';
+  addBtn.disabled = !valid || url === '' || status === 'loading';
   if (valid) {
     input.classList.remove('border', 'border-danger');
   } else {
@@ -48,8 +69,7 @@ const renderAddField = () => {
 
 const renderFeeds = () => {
   const { channels, posts } = state.feedProcess;
-  const channelsContainer = document.querySelector('#channels');
-  const postsContainer = document.querySelector('#posts');
+  const { channelsContainer, postsContainer } = getDOMElements();
   const channelsUl = document.createElement('ul');
   channelsUl.id = 'channels';
   channelsUl.classList.add('list-group');
@@ -61,7 +81,7 @@ const renderFeeds = () => {
   });
   const postsUl = document.createElement('ul');
   postsUl.id = 'posts';
-  postsUl.classList.add('list-group', 'mt-3');
+  postsUl.classList.add('list-group', 'my-3');
   posts.forEach((post) => {
     const li = document.createElement('li');
     li.classList.add('list-group-item');
@@ -73,8 +93,7 @@ const renderFeeds = () => {
 };
 
 const app = () => {
-  const input = document.querySelector('#input');
-  const form = document.querySelector('#form');
+  const { input, form } = getDOMElements();
   input.addEventListener('keyup', () => {
     state.addProcess.status = 'idle';
     state.addProcess.url = input.value;
