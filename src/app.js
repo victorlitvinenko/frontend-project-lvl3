@@ -2,6 +2,7 @@ import isURL from 'validator/lib/isURL';
 import axios from 'axios';
 import WatchJS from 'melanke-watchjs';
 import _ from 'lodash';
+import $ from 'jquery';
 
 const state = {
   addProcess: {
@@ -98,7 +99,14 @@ const renderFeeds = () => {
   postsUl.id = 'posts';
   postsUl.classList.add('list-group');
   posts.filter((post) => post.id === activeChannelID).forEach((post) => {
-    const str = `<li class="list-group-item"><a target="_blank" href="${post.link}">${post.title}</a></li>`;
+    const str = `<li class="list-group-item">
+      <div class="row">
+        <div class="col my-auto"><a target="_blank" href="${post.link}">${post.title}</a></div>
+        <div class="col-auto my-auto">
+          <button class="btn btn-sm btn-light"
+            data-toggle="modal" data-target="#exampleModal" data-descr="${_.escape(post.description)}">?</button>
+        </div>
+      </div></li>`;
     postsUl.insertAdjacentHTML('beforeend', str);
   });
   channelsContainer.replaceWith(channelsUl);
@@ -106,7 +114,6 @@ const renderFeeds = () => {
 };
 
 const loadFeeds = (id) => {
-  // const channel = state.feedProcess.channels.find((el) => el.id === id);
   const channelIndex = state.feedProcess.channels.findIndex((el) => el.id === id);
   const channel = state.feedProcess.channels[channelIndex];
   state.feedProcess.channels[channelIndex].status = 'loading';
@@ -119,7 +126,10 @@ const loadFeeds = (id) => {
       posts.forEach((post) => {
         const postTitle = post.querySelector('title').textContent;
         const postLink = post.querySelector('link').textContent;
-        newPosts.push({ id: channel.id, title: postTitle, link: postLink });
+        const postDescription = post.querySelector('description').textContent;
+        newPosts.push({
+          id: channel.id, title: postTitle, link: postLink, description: postDescription,
+        });
       });
       state.feedProcess.posts = [...otherPosts, ...newPosts];
     })
@@ -160,7 +170,10 @@ const app = () => {
           posts.forEach((post) => {
             const postTitle = post.querySelector('title').textContent;
             const postLink = post.querySelector('link').textContent;
-            state.feedProcess.posts.push({ id, title: postTitle, link: postLink });
+            const postDescription = post.querySelector('description').textContent;
+            state.feedProcess.posts.push({
+              id, title: postTitle, link: postLink, description: postDescription,
+            });
           });
           state.addProcess.addedUrls.push(url);
           state.feedProcess.channels.push({
@@ -185,6 +198,11 @@ const app = () => {
   });
   WatchJS.watch(state, 'feedProcess', () => {
     renderFeeds();
+  });
+  $('#exampleModal').on('show.bs.modal', (event) => {
+    const button = $(event.relatedTarget);
+    const descr = button.data('descr');
+    $('.modal-body div').html(_.unescape(descr));
   });
 };
 
