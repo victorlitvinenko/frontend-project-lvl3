@@ -1,17 +1,17 @@
 <!doctype html>
 <html>
   <head>
-    <title>RSS</title>
+    <title>Лента новостей (RSS)</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" href="favicon.ico">
   </head>
-  <body>
+  <body class="bg-dark">
     <div id="point" class="container pt-3">
-      <div class="jumbotron mb-3">
+      <div class="jumbotron mb-3 p-3">
         <form id="form">
           <div class="input-group">
-            <input id="input" type="text" class="form-control" placeholder="RSS-поток">
+            <input id="input" type="text" class="form-control" placeholder="Введите адрес RSS">
             <span class="input-group-append">
               <button id="add" class="btn btn-success" type="submit">
                 <div id="spinner" class="spinner-border spinner-border-sm d-none" role="status">
@@ -26,8 +26,10 @@
       <div id="alert" class="alert alert-danger d-none" role="alert">
         Ошибка загрузки
       </div>
-      <ul id="channels"></ul>
-      <ul id="posts"></ul>
+      <div class="row">
+        <div class="col-12 col-sm-12 col-md-5 col-lg-4 mb-3 pr-md-0"><ul id="channels"></ul></div>
+        <div class="col-12 col-sm-12 col-md-7 col-lg-8 mb-3"><ul id="posts"></ul></div>
+      </div>
     </div>
   </body>
 </html>
