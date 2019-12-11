@@ -59,6 +59,9 @@ const renderAddField = () => {
     case 'loading':
       toggleAddItems({ alertShow: false, spinnerShow: true, inputDisabled: true });
       break;
+    case 'idle':
+      toggleAddItems({ alertShow: false, spinnerShow: false, inputDisabled: false });
+      break;
     default:
       toggleAddItems({ alertShow: false, spinnerShow: false, inputDisabled: false });
   }
@@ -113,7 +116,7 @@ const renderFeeds = () => {
   postsContainer.replaceWith(postsUl);
 };
 
-const loadNewFeeds = (id) => {
+const loadNewPosts = (id) => {
   const channelIndex = state.feedProcess.channels.findIndex((el) => el.id === id);
   const channelPosts = state.feedProcess.posts.filter((el) => el.id === id);
   const channel = state.feedProcess.channels[channelIndex];
@@ -144,7 +147,7 @@ const loadNewFeeds = (id) => {
       console.log(error);
     })
     .finally(() => {
-      state.feedProcess.channels[channelIndex].status = '';
+      state.feedProcess.channels[channelIndex].status = 'idle';
     });
 };
 
@@ -186,11 +189,11 @@ const app = () => {
           });
           state.addProcess.addedUrls.push(url);
           state.feedProcess.channels.push({
-            id, title, description, url: channelURL, status: '',
+            id, title, description, url: channelURL, status: 'idle',
           });
           state.feedProcess.activeChannelID = id;
           setInterval(() => {
-            loadNewFeeds(id);
+            loadNewPosts(id);
           }, 5000);
         })
         .catch((error) => {
