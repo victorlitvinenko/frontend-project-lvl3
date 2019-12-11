@@ -71,7 +71,7 @@ const renderAddField = () => {
   }
 };
 
-const setActiveFeed = (id) => {
+const setActiveChannel = (id) => {
   state.feedProcess.activeChannelID = id;
 };
 
@@ -88,7 +88,7 @@ const renderFeeds = () => {
     a.href = '#';
     a.onclick = (e) => {
       e.preventDefault();
-      setActiveFeed(channel.id);
+      setActiveChannel(channel.id);
     };
     a.innerHTML = `<div class="font-weight-bold">${channel.title}
     <div id="spinner" class="spinner-border spinner-border-sm ${channel.status !== 'loading' ? 'd-none' : ''}"
@@ -113,8 +113,9 @@ const renderFeeds = () => {
   postsContainer.replaceWith(postsUl);
 };
 
-const loadFeeds = (id) => {
+const loadNewFeeds = (id) => {
   const channelIndex = state.feedProcess.channels.findIndex((el) => el.id === id);
+  const channelPosts = state.feedProcess.posts.filter((el) => el.id === id);
   const channel = state.feedProcess.channels[channelIndex];
   state.feedProcess.channels[channelIndex].status = 'loading';
   axios.get(channel.url)
@@ -122,16 +123,22 @@ const loadFeeds = (id) => {
       const doc = new DOMParser().parseFromString(response.data, 'text/xml');
       const posts = doc.querySelectorAll('item');
       const newPosts = [];
-      const otherPosts = state.feedProcess.posts.filter((post) => post.id !== id);
       posts.forEach((post) => {
-        const postTitle = post.querySelector('title').textContent;
-        const postLink = post.querySelector('link').textContent;
-        const postDescription = post.querySelector('description').textContent;
-        newPosts.push({
-          id: channel.id, title: postTitle, link: postLink, description: postDescription,
-        });
+        const postGuid = post.querySelector('guid').textContent;
+        if (!channelPosts.some((e) => e.guid === postGuid)) {
+          const postTitle = post.querySelector('title').textContent;
+          const postLink = post.querySelector('link').textContent;
+          const postDescription = post.querySelector('description').textContent;
+          newPosts.push({
+            id: channel.id,
+            title: postTitle,
+            link: postLink,
+            description: postDescription,
+            guid: postGuid,
+          });
+        }
       });
-      state.feedProcess.posts = [...otherPosts, ...newPosts];
+      state.feedProcess.posts = [...newPosts, ...state.feedProcess.posts];
     })
     .catch((error) => {
       console.log(error);
@@ -163,6 +170,7 @@ const app = () => {
         .then((response) => {
           state.addProcess.status = 'idle';
           const doc = new DOMParser().parseFromString(response.data, 'text/xml');
+          console.log(doc);
           const title = doc.querySelector('channel title').textContent;
           const description = doc.querySelector('channel description').textContent;
           const id = _.uniqueId();
@@ -171,8 +179,9 @@ const app = () => {
             const postTitle = post.querySelector('title').textContent;
             const postLink = post.querySelector('link').textContent;
             const postDescription = post.querySelector('description').textContent;
+            const postGuid = post.querySelector('guid').textContent;
             state.feedProcess.posts.push({
-              id, title: postTitle, link: postLink, description: postDescription,
+              id, title: postTitle, link: postLink, description: postDescription, guid: postGuid,
             });
           });
           state.addProcess.addedUrls.push(url);
@@ -181,8 +190,8 @@ const app = () => {
           });
           state.feedProcess.activeChannelID = id;
           setInterval(() => {
-            loadFeeds(id);
-          }, 15000);
+            loadNewFeeds(id);
+          }, 5000);
         })
         .catch((error) => {
           state.addProcess.status = 'error';
