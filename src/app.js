@@ -4,21 +4,7 @@ import WatchJS from 'melanke-watchjs';
 import _ from 'lodash';
 import $ from 'jquery';
 
-const state = {
-  addProcess: {
-    status: 'idle',
-    url: '',
-    valid: true,
-    addedUrls: [],
-  },
-  feedProcess: {
-    activeChannelID: null,
-    channels: [],
-    posts: [],
-  },
-};
-
-const getDOMElements = () => {
+const getDomElements = () => {
   const input = document.querySelector('#input');
   const form = document.querySelector('#form');
   const addBtn = document.querySelector('#add');
@@ -26,8 +12,9 @@ const getDOMElements = () => {
   const alert = document.querySelector('#alert');
   const channelsContainer = document.querySelector('#channels');
   const postsContainer = document.querySelector('#posts');
+  const leftCol = document.querySelector('#leftCol');
   return {
-    input, form, addBtn, spinner, alert, channelsContainer, postsContainer,
+    input, form, addBtn, spinner, alert, channelsContainer, postsContainer, leftCol,
   };
 };
 
@@ -35,7 +22,7 @@ const toggleAddItems = (config) => {
   const { alertShow, spinnerShow, inputDisabled } = config;
   const {
     input, spinner, alert,
-  } = getDOMElements();
+  } = getDomElements();
   if (alertShow) {
     alert.classList.remove('d-none');
   } else {
@@ -49,8 +36,8 @@ const toggleAddItems = (config) => {
   input.disabled = inputDisabled;
 };
 
-const renderAddField = () => {
-  const { input, addBtn } = getDOMElements();
+const renderAddField = (state) => {
+  const { input, addBtn } = getDomElements();
   const { url, valid, status } = state.addProcess;
   switch (status) {
     case 'error':
@@ -63,7 +50,7 @@ const renderAddField = () => {
       toggleAddItems({ alertShow: false, spinnerShow: false, inputDisabled: false });
       break;
     default:
-      toggleAddItems({ alertShow: false, spinnerShow: false, inputDisabled: false });
+      throw new Error(`Status '${status}' not found`);
   }
   input.value = url;
   addBtn.disabled = !valid || url === '' || status === 'loading';
@@ -74,33 +61,20 @@ const renderAddField = () => {
   }
 };
 
-const setActiveChannel = (id) => {
-  state.feedProcess.activeChannelID = id;
-};
-
-const renderFeeds = () => {
+const renderFeeds = (state) => {
   const { channels, posts, activeChannelID } = state.feedProcess;
-  const { channelsContainer, postsContainer } = getDOMElements();
-  const channelsUl = document.createElement('ul');
-  channelsUl.id = 'channels';
-  channelsUl.classList.add('list-group');
+  const { channelsContainer, postsContainer } = getDomElements();
+  channelsContainer.innerHTML = '';
   channels.forEach((channel) => {
-    const a = document.createElement('a');
-    a.classList.add('list-group-item', 'list-group-item-action');
-    if (activeChannelID === channel.id) a.classList.add('active');
-    a.href = '#';
-    a.onclick = (e) => {
-      e.preventDefault();
-      setActiveChannel(channel.id);
-    };
-    a.innerHTML = `<div class="font-weight-bold">${channel.title}
-    <div id="spinner" class="spinner-border spinner-border-sm ${channel.status !== 'loading' ? 'd-none' : ''}"
-      role="status"></div></div><small>${channel.description}</small>`;
-    channelsUl.prepend(a);
+    const str = `<a href="#" class="${activeChannelID === channel.id ? 'active' : ''}
+      list-group-item list-group-item-action"
+      data-id="${channel.id}">
+      <div class="font-weight-bold">${channel.title}
+      <div id="spinner" class="spinner-border spinner-border-sm ${channel.status !== 'loading' ? 'd-none' : ''}"
+      role="status"></div></div><small>${channel.description}</small></a>`;
+    channelsContainer.insertAdjacentHTML('afterbegin', str);
   });
-  const postsUl = document.createElement('ul');
-  postsUl.id = 'posts';
-  postsUl.classList.add('list-group');
+  postsContainer.innerHTML = '';
   posts.filter((post) => post.id === activeChannelID).forEach((post) => {
     const str = `<li class="list-group-item">
       <div class="row">
@@ -110,49 +84,59 @@ const renderFeeds = () => {
             data-toggle="modal" data-target="#exampleModal" data-descr="${_.escape(post.description)}">?</button>
         </div>
       </div></li>`;
-    postsUl.insertAdjacentHTML('beforeend', str);
+    postsContainer.insertAdjacentHTML('beforeend', str);
   });
-  channelsContainer.replaceWith(channelsUl);
-  postsContainer.replaceWith(postsUl);
 };
 
-const loadNewPosts = (id) => {
+const loadNewPosts = (state, id) => {
   const channelIndex = state.feedProcess.channels.findIndex((el) => el.id === id);
   const channelPosts = state.feedProcess.posts.filter((el) => el.id === id);
   const channel = state.feedProcess.channels[channelIndex];
-  state.feedProcess.channels[channelIndex].status = 'loading';
-  axios.get(channel.url)
+  return axios.get(channel.url)
     .then((response) => {
       const doc = new DOMParser().parseFromString(response.data, 'text/xml');
       const posts = doc.querySelectorAll('item');
-      const newPosts = [];
-      posts.forEach((post) => {
+      return [...posts].reduce((acc, post) => {
         const postGuid = post.querySelector('guid').textContent;
         if (!channelPosts.some((e) => e.guid === postGuid)) {
           const postTitle = post.querySelector('title').textContent;
           const postLink = post.querySelector('link').textContent;
           const postDescription = post.querySelector('description').textContent;
-          newPosts.push({
+          return [...acc, {
             id: channel.id,
             title: postTitle,
             link: postLink,
             description: postDescription,
             guid: postGuid,
-          });
+          }];
         }
-      });
-      state.feedProcess.posts = [...newPosts, ...state.feedProcess.posts];
+        return acc;
+      }, []);
     })
-    .catch((error) => {
-      console.log(error);
-    })
-    .finally(() => {
-      state.feedProcess.channels[channelIndex].status = 'idle';
-    });
+    .catch((error) => error);
 };
 
 const app = () => {
-  const { input, form } = getDOMElements();
+  const state = {
+    addProcess: {
+      status: 'idle',
+      url: '',
+      valid: true,
+      addedUrls: [],
+    },
+    feedProcess: {
+      activeChannelID: null,
+      channels: [],
+      posts: [],
+    },
+  };
+
+  const { input, form, channelsContainer } = getDomElements();
+  channelsContainer.addEventListener('click', (e) => {
+    e.preventDefault();
+    const a = e.target.closest('a');
+    if (a) state.feedProcess.activeChannelID = a.dataset.id;
+  });
   input.addEventListener('input', () => {
     state.addProcess.status = 'idle';
     state.addProcess.url = input.value;
@@ -173,7 +157,6 @@ const app = () => {
         .then((response) => {
           state.addProcess.status = 'idle';
           const doc = new DOMParser().parseFromString(response.data, 'text/xml');
-          console.log(doc);
           const title = doc.querySelector('channel title').textContent;
           const description = doc.querySelector('channel description').textContent;
           const id = _.uniqueId();
@@ -193,7 +176,27 @@ const app = () => {
           });
           state.feedProcess.activeChannelID = id;
           setInterval(() => {
-            loadNewPosts(id);
+            const channelIndex = state.feedProcess.channels.findIndex((el) => el.id === id);
+            const start = new Promise((resolve, reject) => {
+              state.feedProcess.channels[channelIndex].status = 'loading';
+              loadNewPosts(state, id)
+                .then((data) => {
+                  resolve(data);
+                })
+                .catch((error) => {
+                  reject(error);
+                });
+            });
+            start
+              .then((newPosts) => {
+                state.feedProcess.posts = [...newPosts, ...state.feedProcess.posts];
+              })
+              .catch((error) => {
+                console.log(error);
+              })
+              .finally(() => {
+                state.feedProcess.channels[channelIndex].status = 'idle';
+              });
           }, 5000);
         })
         .catch((error) => {
@@ -206,10 +209,10 @@ const app = () => {
     }
   });
   WatchJS.watch(state, 'addProcess', () => {
-    renderAddField();
+    renderAddField(state);
   });
   WatchJS.watch(state, 'feedProcess', () => {
-    renderFeeds();
+    renderFeeds(state);
   });
   $('#exampleModal').on('show.bs.modal', (event) => {
     const button = $(event.relatedTarget);
