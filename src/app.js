@@ -185,6 +185,9 @@ const app = () => {
                 })
                 .catch((error) => {
                   reject(error);
+                })
+                .finally(() => {
+                  state.feedProcess.channels[channelIndex].status = 'idle';
                 });
             });
             start
@@ -193,9 +196,6 @@ const app = () => {
               })
               .catch((error) => {
                 console.log(error);
-              })
-              .finally(() => {
-                state.feedProcess.channels[channelIndex].status = 'idle';
               });
           }, 5000);
         })
