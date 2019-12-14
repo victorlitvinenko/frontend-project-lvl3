@@ -12,9 +12,8 @@ const getDomElements = () => {
   const alert = document.querySelector('#alert');
   const channelsContainer = document.querySelector('#channels');
   const postsContainer = document.querySelector('#posts');
-  const leftCol = document.querySelector('#leftCol');
   return {
-    input, form, addBtn, spinner, alert, channelsContainer, postsContainer, leftCol,
+    input, form, addBtn, spinner, alert, channelsContainer, postsContainer,
   };
 };
 
