@@ -17,7 +17,7 @@ const getDomElements = () => {
   };
 };
 
-const toggleAddItems = (config) => {
+const toggleAdditionItems = (config) => {
   const { alertShow, spinnerShow, inputDisabled } = config;
   const {
     input, spinner, alert,
@@ -35,18 +35,18 @@ const toggleAddItems = (config) => {
   input.disabled = inputDisabled;
 };
 
-const renderAddField = (state) => {
+const renderAdditionSection = (state) => {
   const { input, addBtn } = getDomElements();
   const { url, valid, status } = state.additionProcess;
   switch (status) {
     case 'error':
-      toggleAddItems({ alertShow: true, spinnerShow: false, inputDisabled: false });
+      toggleAdditionItems({ alertShow: true, spinnerShow: false, inputDisabled: false });
       break;
     case 'loading':
-      toggleAddItems({ alertShow: false, spinnerShow: true, inputDisabled: true });
+      toggleAdditionItems({ alertShow: false, spinnerShow: true, inputDisabled: true });
       break;
     case 'idle':
-      toggleAddItems({ alertShow: false, spinnerShow: false, inputDisabled: false });
+      toggleAdditionItems({ alertShow: false, spinnerShow: false, inputDisabled: false });
       break;
     default:
       throw new Error(`Status '${status}' not found`);
@@ -224,7 +224,7 @@ const app = () => {
       });
   });
   WatchJS.watch(state, 'additionProcess', () => {
-    renderAddField(state);
+    renderAdditionSection(state);
   });
   WatchJS.watch(state, ['activeChannelID', 'channels', 'posts'], () => {
     renderFeeds(state);
