@@ -37,7 +37,7 @@ const toggleAddItems = (config) => {
 
 const renderAddField = (state) => {
   const { input, addBtn } = getDomElements();
-  const { url, valid, status } = state.addProcess;
+  const { url, valid, status } = state.additionProcess;
   switch (status) {
     case 'error':
       toggleAddItems({ alertShow: true, spinnerShow: false, inputDisabled: false });
@@ -61,7 +61,7 @@ const renderAddField = (state) => {
 };
 
 const renderFeeds = (state) => {
-  const { channels, posts, activeChannelID } = state.feedProcess;
+  const { channels, posts, activeChannelID } = state;
   const { channelsContainer, postsContainer } = getDomElements();
   channelsContainer.innerHTML = '';
   channels.forEach((channel) => {
@@ -88,9 +88,9 @@ const renderFeeds = (state) => {
 };
 
 const loadNewPosts = (state, id) => {
-  const channelIndex = state.feedProcess.channels.findIndex((el) => el.id === id);
-  const channelPosts = state.feedProcess.posts.filter((el) => el.id === id);
-  const channel = state.feedProcess.channels[channelIndex];
+  const channelIndex = state.channels.findIndex((el) => el.id === id);
+  const channelPosts = state.posts.filter((el) => el.id === id);
+  const channel = state.channels[channelIndex];
   return axios.get(channel.url)
     .then((response) => {
       const doc = new DOMParser().parseFromString(response.data, 'text/xml');
@@ -115,102 +115,118 @@ const loadNewPosts = (state, id) => {
     .catch((error) => error);
 };
 
+const parseDom = (data) => {
+  const doc = new DOMParser().parseFromString(data, 'text/xml');
+  const title = doc.querySelector('channel title').textContent;
+  const description = doc.querySelector('channel description').textContent;
+  const id = _.uniqueId();
+  const posts = doc.querySelectorAll('item');
+  return {
+    title, description, id, posts,
+  };
+};
+
+const parsePost = (post) => {
+  const postTitle = post.querySelector('title').textContent;
+  const postLink = post.querySelector('link').textContent;
+  const postDescription = post.querySelector('description').textContent;
+  const postGuid = post.querySelector('guid').textContent;
+  return {
+    postTitle, postLink, postDescription, postGuid,
+  };
+};
+
 const app = () => {
   const state = {
-    addProcess: {
+    additionProcess: {
       status: 'idle',
       url: '',
       valid: true,
       addedUrls: [],
     },
-    feedProcess: {
-      activeChannelID: null,
-      channels: [],
-      posts: [],
-    },
+    activeChannelID: null,
+    channels: [],
+    posts: [],
   };
 
   const { input, form, channelsContainer } = getDomElements();
   channelsContainer.addEventListener('click', (e) => {
     e.preventDefault();
     const a = e.target.closest('a');
-    if (a) state.feedProcess.activeChannelID = a.dataset.id;
+    if (a) state.activeChannelID = a.dataset.id;
   });
   input.addEventListener('input', () => {
-    state.addProcess.status = 'idle';
-    state.addProcess.url = input.value;
-    const { url } = state.addProcess;
+    state.additionProcess.status = 'idle';
+    state.additionProcess.url = input.value;
+    const { url } = state.additionProcess;
     if (url === '') {
-      state.addProcess.valid = true;
+      state.additionProcess.valid = true;
     } else {
-      state.addProcess.valid = isURL(url) && !state.addProcess.addedUrls.includes(url);
+      state.additionProcess.valid = isURL(url) && !state.additionProcess.addedUrls.includes(url);
     }
   });
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    const { url } = state.addProcess;
-    if (url !== '') {
-      state.addProcess.status = 'loading';
-      const channelURL = `https://cors-anywhere.herokuapp.com/${url}`;
-      axios.get(channelURL)
-        .then((response) => {
-          state.addProcess.status = 'idle';
-          const doc = new DOMParser().parseFromString(response.data, 'text/xml');
-          const title = doc.querySelector('channel title').textContent;
-          const description = doc.querySelector('channel description').textContent;
-          const id = _.uniqueId();
-          const posts = doc.querySelectorAll('item');
-          posts.forEach((post) => {
-            const postTitle = post.querySelector('title').textContent;
-            const postLink = post.querySelector('link').textContent;
-            const postDescription = post.querySelector('description').textContent;
-            const postGuid = post.querySelector('guid').textContent;
-            state.feedProcess.posts.push({
-              id, title: postTitle, link: postLink, description: postDescription, guid: postGuid,
-            });
+    const { url } = state.additionProcess;
+    if (url === '') return;
+    state.additionProcess.status = 'loading';
+    const channelURL = `https://cors-anywhere.herokuapp.com/${url}`;
+    axios.get(channelURL)
+      .then((response) => {
+        state.additionProcess.status = 'idle';
+        const {
+          title, description, id, posts,
+        } = parseDom(response.data);
+        posts.forEach((post) => {
+          const {
+            postTitle, postLink, postDescription, postGuid,
+          } = parsePost(post);
+          state.posts.push({
+            id, title: postTitle, link: postLink, description: postDescription, guid: postGuid,
           });
-          state.addProcess.addedUrls.push(url);
-          state.feedProcess.channels.push({
-            id, title, description, url: channelURL, status: 'idle',
-          });
-          state.feedProcess.activeChannelID = id;
-          setInterval(() => {
-            const channelIndex = state.feedProcess.channels.findIndex((el) => el.id === id);
-            const start = new Promise((resolve, reject) => {
-              state.feedProcess.channels[channelIndex].status = 'loading';
-              loadNewPosts(state, id)
-                .then((data) => {
-                  resolve(data);
-                })
-                .catch((error) => {
-                  reject(error);
-                })
-                .finally(() => {
-                  state.feedProcess.channels[channelIndex].status = 'idle';
-                });
-            });
-            start
-              .then((newPosts) => {
-                state.feedProcess.posts = [...newPosts, ...state.feedProcess.posts];
+        });
+        state.additionProcess.addedUrls.push(url);
+        state.channels.push({
+          id, title, description, url: channelURL, status: 'idle',
+        });
+        state.activeChannelID = id;
+        setInterval(() => {
+          const channelIndex = state.channels.findIndex((el) => el.id === id);
+          if (state.channels[channelIndex].status === 'loading') return;
+          const start = new Promise((resolve, reject) => {
+            state.channels[channelIndex].status = 'loading';
+            loadNewPosts(state, id)
+              .then((data) => {
+                resolve(data);
               })
               .catch((error) => {
-                console.log(error);
+                reject(error);
+              })
+              .finally(() => {
+                state.channels[channelIndex].status = 'idle';
               });
-          }, 5000);
-        })
-        .catch((error) => {
-          state.addProcess.status = 'error';
-          console.log(error);
-        })
-        .finally(() => {
-          state.addProcess.url = '';
-        });
-    }
+          });
+          start
+            .then((newPosts) => {
+              state.posts = [...newPosts, ...state.posts];
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        }, 5000);
+      })
+      .catch((error) => {
+        state.additionProcess.status = 'error';
+        console.log(error);
+      })
+      .finally(() => {
+        state.additionProcess.url = '';
+      });
   });
-  WatchJS.watch(state, 'addProcess', () => {
+  WatchJS.watch(state, 'additionProcess', () => {
     renderAddField(state);
   });
-  WatchJS.watch(state, 'feedProcess', () => {
+  WatchJS.watch(state, ['activeChannelID', 'channels', 'posts'], () => {
     renderFeeds(state);
   });
   $('#exampleModal').on('show.bs.modal', (event) => {
