@@ -61,11 +61,11 @@ const renderAdditionSection = (state) => {
 };
 
 const renderFeeds = (state) => {
-  const { channels, posts, activeChannelID } = state;
+  const { channels, posts, activeChannelId } = state;
   const { channelsContainer, postsContainer } = getDomElements();
   channelsContainer.innerHTML = '';
   channels.forEach((channel) => {
-    const str = `<a href="#" class="${activeChannelID === channel.id ? 'active' : ''}
+    const str = `<a href="#" class="${activeChannelId === channel.id ? 'active' : ''}
       list-group-item list-group-item-action"
       data-id="${channel.id}">
       <div class="font-weight-bold">${channel.title}
@@ -74,7 +74,7 @@ const renderFeeds = (state) => {
     channelsContainer.insertAdjacentHTML('afterbegin', str);
   });
   postsContainer.innerHTML = '';
-  posts.filter((post) => post.id === activeChannelID).forEach((post) => {
+  posts.filter((post) => post.id === activeChannelId).forEach((post) => {
     const str = `<li class="list-group-item">
       <div class="row">
         <div class="col my-auto"><a target="_blank" href="${post.link}">${post.title}</a></div>
@@ -144,7 +144,7 @@ const app = () => {
       valid: true,
       addedUrls: [],
     },
-    activeChannelID: null,
+    activeChannelId: null,
     channels: [],
     posts: [],
   };
@@ -153,7 +153,7 @@ const app = () => {
   channelsContainer.addEventListener('click', (e) => {
     e.preventDefault();
     const a = e.target.closest('a');
-    if (a) state.activeChannelID = a.dataset.id;
+    if (a) state.activeChannelId = a.dataset.id;
   });
   input.addEventListener('input', () => {
     state.additionProcess.status = 'idle';
@@ -189,7 +189,7 @@ const app = () => {
         state.channels.push({
           id, title, description, url: channelURL, status: 'idle',
         });
-        state.activeChannelID = id;
+        state.activeChannelId = id;
         setInterval(() => {
           const channelIndex = state.channels.findIndex((el) => el.id === id);
           if (state.channels[channelIndex].status === 'loading') return;
@@ -226,7 +226,7 @@ const app = () => {
   WatchJS.watch(state, 'additionProcess', () => {
     renderAdditionSection(state);
   });
-  WatchJS.watch(state, ['activeChannelID', 'channels', 'posts'], () => {
+  WatchJS.watch(state, ['activeChannelId', 'channels', 'posts'], () => {
     renderFeeds(state);
   });
   $('#exampleModal').on('show.bs.modal', (event) => {
