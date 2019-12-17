@@ -51,7 +51,7 @@
     "jest": "^24.9.0",
     "jest-cli": "^24.9.0",
     "style-loader": "^1.0.1",
-    "webpack": "^4.41.2",
+    "webpack": "^4.41.3",
     "webpack-cli": "^3.3.10",
     "webpack-dev-server": "^3.9.0"
   }
