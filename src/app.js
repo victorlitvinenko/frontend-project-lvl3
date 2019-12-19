@@ -18,41 +18,54 @@ const getDomElements = () => {
 };
 
 const toggleAdditionItems = (config) => {
-  const { alertShow, spinnerShow, inputDisabled } = config;
   const {
-    input, spinner, alert,
+    showAlert, showSpinner, inputDisabled, addBtnDisabled,
+  } = config;
+  const {
+    input, spinner, alert, addBtn,
   } = getDomElements();
-  if (alertShow) {
+  if (showAlert) {
     alert.classList.remove('d-none');
   } else {
     alert.classList.add('d-none');
   }
-  if (spinnerShow) {
+  if (showSpinner) {
     spinner.classList.remove('d-none');
   } else {
     spinner.classList.add('d-none');
   }
   input.disabled = inputDisabled;
+  addBtn.disabled = addBtnDisabled;
 };
 
 const renderAdditionSection = (state) => {
-  const { input, addBtn } = getDomElements();
+  const { input } = getDomElements();
   const { url, valid, status } = state.additionProcess;
+  input.value = url;
   switch (status) {
     case 'error':
-      toggleAdditionItems({ alertShow: true, spinnerShow: false, inputDisabled: false });
+      toggleAdditionItems({
+        showAlert: true, showSpinner: false, inputDisabled: false, addBtnDisabled: true,
+      });
       break;
     case 'loading':
-      toggleAdditionItems({ alertShow: false, spinnerShow: true, inputDisabled: true });
+      toggleAdditionItems({
+        showAlert: false, showSpinner: true, inputDisabled: true, addBtnDisabled: true,
+      });
       break;
     case 'idle':
-      toggleAdditionItems({ alertShow: false, spinnerShow: false, inputDisabled: false });
+      toggleAdditionItems({
+        showAlert: false, showSpinner: false, inputDisabled: false, addBtnDisabled: !valid,
+      });
+      break;
+    case 'empty':
+      toggleAdditionItems({
+        showAlert: false, showSpinner: false, inputDisabled: false, addBtnDisabled: true,
+      });
       break;
     default:
       throw new Error(`Status '${status}' not found`);
   }
-  input.value = url;
-  addBtn.disabled = !valid || url === '' || status === 'loading';
   if (valid) {
     input.classList.remove('border', 'border-danger');
   } else {
@@ -87,62 +100,54 @@ const renderFeeds = (state) => {
   });
 };
 
+const parse = (data) => {
+  const doc = new DOMParser().parseFromString(data, 'text/xml');
+  const title = doc.querySelector('channel title').textContent;
+  const description = doc.querySelector('channel description').textContent;
+  const id = _.uniqueId();
+  const postsElements = doc.querySelectorAll('item');
+  const posts = [...postsElements].map((post) => {
+    const postTitle = post.querySelector('title').textContent;
+    const postLink = post.querySelector('link').textContent;
+    const postDescription = post.querySelector('description').textContent;
+    const postGuid = post.querySelector('guid').textContent;
+    return {
+      postTitle, postLink, postDescription, postGuid,
+    };
+  });
+  return {
+    id, title, description, posts,
+  };
+};
+
 const loadNewPosts = (state, id) => {
-  const channelIndex = state.channels.findIndex((el) => el.id === id);
+  const channel = state.channels.find((el) => el.id === id);
   const channelPosts = state.posts.filter((el) => el.id === id);
-  const channel = state.channels[channelIndex];
-  return axios.get(channel.url)
+  return axios.get(`https://cors-anywhere.herokuapp.com/${channel.url}`)
     .then((response) => {
-      const doc = new DOMParser().parseFromString(response.data, 'text/xml');
-      const posts = doc.querySelectorAll('item');
-      return [...posts].reduce((acc, post) => {
-        const postGuid = post.querySelector('guid').textContent;
-        if (!channelPosts.some((e) => e.guid === postGuid)) {
-          const postTitle = post.querySelector('title').textContent;
-          const postLink = post.querySelector('link').textContent;
-          const postDescription = post.querySelector('description').textContent;
+      const { posts } = parse(response.data);
+      return posts.reduce((acc, post) => {
+        if (!channelPosts.some((e) => e.guid === post.postGuid)) {
           return [...acc, {
             id: channel.id,
-            title: postTitle,
-            link: postLink,
-            description: postDescription,
-            guid: postGuid,
+            title: post.postTitle,
+            link: post.postLink,
+            description: post.postDescription,
+            guid: post.postGuid,
           }];
         }
         return acc;
       }, []);
     })
-    .catch((error) => error);
-};
-
-const parseDom = (data) => {
-  const doc = new DOMParser().parseFromString(data, 'text/xml');
-  const title = doc.querySelector('channel title').textContent;
-  const description = doc.querySelector('channel description').textContent;
-  const id = _.uniqueId();
-  const posts = doc.querySelectorAll('item');
-  return {
-    title, description, id, posts,
-  };
-};
-
-const parsePost = (post) => {
-  const postTitle = post.querySelector('title').textContent;
-  const postLink = post.querySelector('link').textContent;
-  const postDescription = post.querySelector('description').textContent;
-  const postGuid = post.querySelector('guid').textContent;
-  return {
-    postTitle, postLink, postDescription, postGuid,
-  };
+    .catch((error) => console.log(error));
 };
 
 const app = () => {
   const state = {
     additionProcess: {
-      status: 'idle',
+      status: 'empty',
       url: '',
       valid: true,
-      addedUrls: [],
     },
     activeChannelId: null,
     channels: [],
@@ -153,22 +158,23 @@ const app = () => {
   channelsContainer.addEventListener('click', (e) => {
     e.preventDefault();
     const a = e.target.closest('a');
-    if (a) state.activeChannelId = a.dataset.id;
+    state.activeChannelId = a ? a.dataset.id : state.activeChannelId;
   });
   input.addEventListener('input', () => {
-    state.additionProcess.status = 'idle';
     state.additionProcess.url = input.value;
     const { url } = state.additionProcess;
+    const { channels } = state;
     if (url === '') {
+      state.additionProcess.status = 'empty';
       state.additionProcess.valid = true;
     } else {
-      state.additionProcess.valid = isURL(url) && !state.additionProcess.addedUrls.includes(url);
+      state.additionProcess.status = 'idle';
+      state.additionProcess.valid = isURL(url) && !channels.some((e) => e.url === url);
     }
   });
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const { url } = state.additionProcess;
-    if (url === '') return;
     state.additionProcess.status = 'loading';
     const channelURL = `https://cors-anywhere.herokuapp.com/${url}`;
     axios.get(channelURL)
@@ -176,19 +182,20 @@ const app = () => {
         state.additionProcess.status = 'idle';
         const {
           title, description, id, posts,
-        } = parseDom(response.data);
+        } = parse(response.data);
         posts.forEach((post) => {
-          const {
-            postTitle, postLink, postDescription, postGuid,
-          } = parsePost(post);
           state.posts.push({
-            id, title: postTitle, link: postLink, description: postDescription, guid: postGuid,
+            id,
+            title: post.postTitle,
+            link: post.postLink,
+            description: post.postDescription,
+            guid: post.postGuid,
           });
         });
-        state.additionProcess.addedUrls.push(url);
         state.channels.push({
-          id, title, description, url: channelURL, status: 'idle',
+          id, title, description, url, status: 'idle',
         });
+        state.additionProcess.status = 'empty';
         state.activeChannelId = id;
         setInterval(() => {
           const channelIndex = state.channels.findIndex((el) => el.id === id);
