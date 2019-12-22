@@ -19,17 +19,17 @@ const getDomElements = () => {
 
 const toggleAdditionItems = (config) => {
   const {
-    showAlert, showSpinner, inputDisabled, addBtnDisabled,
+    visibleAlert, visibleSpinner, inputDisabled, addBtnDisabled,
   } = config;
   const {
     input, spinner, alert, addBtn,
   } = getDomElements();
-  if (showAlert) {
+  if (visibleAlert) {
     alert.classList.remove('d-none');
   } else {
     alert.classList.add('d-none');
   }
-  if (showSpinner) {
+  if (visibleSpinner) {
     spinner.classList.remove('d-none');
   } else {
     spinner.classList.add('d-none');
@@ -45,22 +45,22 @@ const renderAdditionSection = (state) => {
   switch (status) {
     case 'error':
       toggleAdditionItems({
-        showAlert: true, showSpinner: false, inputDisabled: false, addBtnDisabled: true,
+        visibleAlert: true, visibleSpinner: false, inputDisabled: false, addBtnDisabled: true,
       });
       break;
     case 'loading':
       toggleAdditionItems({
-        showAlert: false, showSpinner: true, inputDisabled: true, addBtnDisabled: true,
+        visibleAlert: false, visibleSpinner: true, inputDisabled: true, addBtnDisabled: true,
       });
       break;
     case 'idle':
       toggleAdditionItems({
-        showAlert: false, showSpinner: false, inputDisabled: false, addBtnDisabled: !valid,
+        visibleAlert: false, visibleSpinner: false, inputDisabled: false, addBtnDisabled: !valid,
       });
       break;
     case 'empty':
       toggleAdditionItems({
-        showAlert: false, showSpinner: false, inputDisabled: false, addBtnDisabled: true,
+        visibleAlert: false, visibleSpinner: false, inputDisabled: false, addBtnDisabled: true,
       });
       break;
     default:
@@ -93,30 +93,29 @@ const renderFeeds = (state) => {
         <div class="col my-auto"><a target="_blank" href="${post.link}">${post.title}</a></div>
         <div class="col-auto my-auto">
           <button class="btn btn-sm btn-light"
-            data-toggle="modal" data-target="#exampleModal" data-descr="${_.escape(post.description)}">?</button>
+            data-toggle="modal" data-target="#exampleModal" data-description="${_.escape(post.description)}">?</button>
         </div>
       </div></li>`;
     postsContainer.insertAdjacentHTML('beforeend', str);
   });
 };
 
-const parse = (data) => {
+const parse = (data, id = _.uniqueId()) => {
   const doc = new DOMParser().parseFromString(data, 'text/xml');
-  const title = doc.querySelector('channel title').textContent;
-  const description = doc.querySelector('channel description').textContent;
-  const id = _.uniqueId();
+  const channelTitle = doc.querySelector('channel title').textContent;
+  const channelDescription = doc.querySelector('channel description').textContent;
   const postsElements = doc.querySelectorAll('item');
   const posts = [...postsElements].map((post) => {
-    const postTitle = post.querySelector('title').textContent;
-    const postLink = post.querySelector('link').textContent;
-    const postDescription = post.querySelector('description').textContent;
-    const postGuid = post.querySelector('guid').textContent;
+    const title = post.querySelector('title').textContent;
+    const link = post.querySelector('link').textContent;
+    const description = post.querySelector('description').textContent;
+    const guid = post.querySelector('guid').textContent;
     return {
-      postTitle, postLink, postDescription, postGuid,
+      id, title, link, description, guid,
     };
   });
   return {
-    id, title, description, posts,
+    id, title: channelTitle, description: channelDescription, posts,
   };
 };
 
@@ -125,19 +124,8 @@ const loadNewPosts = (state, id) => {
   const channelPosts = state.posts.filter((el) => el.id === id);
   return axios.get(`https://cors-anywhere.herokuapp.com/${channel.url}`)
     .then((response) => {
-      const { posts } = parse(response.data);
-      return posts.reduce((acc, post) => {
-        if (!channelPosts.some((e) => e.guid === post.postGuid)) {
-          return [...acc, {
-            id: channel.id,
-            title: post.postTitle,
-            link: post.postLink,
-            description: post.postDescription,
-            guid: post.postGuid,
-          }];
-        }
-        return acc;
-      }, []);
+      const { posts } = parse(response.data, channel.id);
+      return _.difference(posts, channelPosts);
     })
     .catch((error) => console.log(error));
 };
@@ -169,7 +157,7 @@ const app = () => {
       state.additionProcess.valid = true;
     } else {
       state.additionProcess.status = 'idle';
-      state.additionProcess.valid = isURL(url) && !channels.some((e) => e.url === url);
+      state.additionProcess.valid = isURL(url) && !channels.some((el) => el.url === url);
     }
   });
   form.addEventListener('submit', (e) => {
@@ -179,46 +167,28 @@ const app = () => {
     const channelURL = `https://cors-anywhere.herokuapp.com/${url}`;
     axios.get(channelURL)
       .then((response) => {
-        state.additionProcess.status = 'idle';
         const {
           title, description, id, posts,
         } = parse(response.data);
-        posts.forEach((post) => {
-          state.posts.push({
-            id,
-            title: post.postTitle,
-            link: post.postLink,
-            description: post.postDescription,
-            guid: post.postGuid,
-          });
-        });
+        state.posts = [...state.posts, ...posts];
         state.channels.push({
           id, title, description, url, status: 'idle',
         });
         state.additionProcess.status = 'empty';
         state.activeChannelId = id;
         setInterval(() => {
-          const channelIndex = state.channels.findIndex((el) => el.id === id);
-          if (state.channels[channelIndex].status === 'loading') return;
-          const start = new Promise((resolve, reject) => {
-            state.channels[channelIndex].status = 'loading';
-            loadNewPosts(state, id)
-              .then((data) => {
-                resolve(data);
-              })
-              .catch((error) => {
-                reject(error);
-              })
-              .finally(() => {
-                state.channels[channelIndex].status = 'idle';
-              });
-          });
-          start
+          const channel = state.channels.find((el) => el.id === id);
+          if (channel.status === 'loading') return;
+          channel.status = 'loading';
+          loadNewPosts(state, id)
             .then((newPosts) => {
               state.posts = [...newPosts, ...state.posts];
             })
             .catch((error) => {
               console.log(error);
+            })
+            .finally(() => {
+              channel.status = 'idle';
             });
         }, 5000);
       })
@@ -238,8 +208,8 @@ const app = () => {
   });
   $('#exampleModal').on('show.bs.modal', (event) => {
     const button = $(event.relatedTarget);
-    const descr = button.data('descr');
-    $('.modal-body div').html(_.unescape(descr));
+    const description = button.data('description');
+    $('.modal-body div').html(_.unescape(description));
   });
 };
 
