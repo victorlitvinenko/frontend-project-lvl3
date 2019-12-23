@@ -4,17 +4,14 @@ import WatchJS from 'melanke-watchjs';
 import _ from 'lodash';
 import $ from 'jquery';
 
-const getDomElements = () => {
-  const input = document.querySelector('#input');
-  const form = document.querySelector('#form');
-  const addBtn = document.querySelector('#add');
-  const spinner = document.querySelector('#spinner');
-  const alert = document.querySelector('#alert');
-  const channelsContainer = document.querySelector('#channels');
-  const postsContainer = document.querySelector('#posts');
-  return {
-    input, form, addBtn, spinner, alert, channelsContainer, postsContainer,
-  };
+const elements = {
+  input: document.querySelector('#input'),
+  form: document.querySelector('#form'),
+  addBtn: document.querySelector('#add'),
+  spinner: document.querySelector('#spinner'),
+  alert: document.querySelector('#alert'),
+  channelsContainer: document.querySelector('#channels'),
+  postsContainer: document.querySelector('#posts'),
 };
 
 const toggleAdditionItems = (config) => {
@@ -23,7 +20,7 @@ const toggleAdditionItems = (config) => {
   } = config;
   const {
     input, spinner, alert, addBtn,
-  } = getDomElements();
+  } = elements;
   if (visibleAlert) {
     alert.classList.remove('d-none');
   } else {
@@ -39,7 +36,7 @@ const toggleAdditionItems = (config) => {
 };
 
 const renderAdditionSection = (state) => {
-  const { input } = getDomElements();
+  const { input } = elements;
   const { url, valid, status } = state.additionProcess;
   input.value = url;
   switch (status) {
@@ -75,7 +72,7 @@ const renderAdditionSection = (state) => {
 
 const renderFeeds = (state) => {
   const { channels, posts, activeChannelId } = state;
-  const { channelsContainer, postsContainer } = getDomElements();
+  const { channelsContainer, postsContainer } = elements;
   channelsContainer.innerHTML = '';
   channels.forEach((channel) => {
     const str = `<a href="#" class="${activeChannelId === channel.id ? 'active' : ''}
@@ -142,7 +139,7 @@ const app = () => {
     posts: [],
   };
 
-  const { input, form, channelsContainer } = getDomElements();
+  const { input, form, channelsContainer } = elements;
   channelsContainer.addEventListener('click', (e) => {
     e.preventDefault();
     const a = e.target.closest('a');
