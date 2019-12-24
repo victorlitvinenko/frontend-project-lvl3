@@ -89,8 +89,7 @@ const renderFeeds = (state) => {
   channels.forEach((channel) => {
     const str = `<a href="#" class="${activeChannelId === channel.id ? 'active' : ''}
       list-group-item list-group-item-action"
-      data-id="${channel.id}">
-      <div class="font-weight-bold">${channel.title}
+      data-id="${channel.id}"><div class="font-weight-bold">${channel.title}
       <div id="spinner" class="spinner-border spinner-border-sm ${channel.status !== 'loading' ? 'd-none' : ''}"
       role="status"></div>
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="${channel.status !== 'error' ? 'd-none' : ''}"><path d="M0 0h24v24H0z" fill="none"></path><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="red"></path></svg>
@@ -99,14 +98,12 @@ const renderFeeds = (state) => {
   });
   postsContainer.innerHTML = '';
   posts.filter((post) => post.id === activeChannelId).forEach((post) => {
-    const str = `<li class="list-group-item">
-      <div class="row">
+    const str = `<li class="list-group-item"><div class="row">
         <div class="col my-auto"><a target="_blank" href="${post.link}">${post.title}</a></div>
         <div class="col-auto my-auto">
           <button class="btn btn-sm btn-light"
             data-toggle="modal" data-target="#exampleModal" data-description="${_.escape(post.description)}">?</button>
-        </div>
-      </div></li>`;
+        </div></div></li>`;
     postsContainer.insertAdjacentHTML('beforeend', str);
   });
 };
