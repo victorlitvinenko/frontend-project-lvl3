@@ -16,23 +16,23 @@ const elements = {
 
 const toggleAdditionItems = (config) => {
   const {
-    visibleAlert, visibleSpinner, inputDisabled, addBtnDisabled,
+    isVisibleAlert, isVisibleSpinner, isDisabledInput, isDisabledAddBtn,
   } = config;
   const {
     input, spinner, alert, addBtn,
   } = elements;
-  if (visibleAlert) {
+  if (isVisibleAlert) {
     alert.classList.remove('d-none');
   } else {
     alert.classList.add('d-none');
   }
-  if (visibleSpinner) {
+  if (isVisibleSpinner) {
     spinner.classList.remove('d-none');
   } else {
     spinner.classList.add('d-none');
   }
-  input.disabled = inputDisabled;
-  addBtn.disabled = addBtnDisabled;
+  input.disabled = isDisabledInput;
+  addBtn.disabled = isDisabledAddBtn;
 };
 
 const renderAdditionSection = (state) => {
@@ -42,22 +42,34 @@ const renderAdditionSection = (state) => {
   switch (status) {
     case 'error':
       toggleAdditionItems({
-        visibleAlert: true, visibleSpinner: false, inputDisabled: false, addBtnDisabled: true,
+        isVisibleAlert: true,
+        isVisibleSpinner: false,
+        isDisabledInput: false,
+        isDisabledAddBtn: true,
       });
       break;
     case 'loading':
       toggleAdditionItems({
-        visibleAlert: false, visibleSpinner: true, inputDisabled: true, addBtnDisabled: true,
+        isVisibleAlert: false,
+        isVisibleSpinner: true,
+        isDisabledInput: true,
+        isDisabledAddBtn: true,
       });
       break;
     case 'idle':
       toggleAdditionItems({
-        visibleAlert: false, visibleSpinner: false, inputDisabled: false, addBtnDisabled: !valid,
+        isVisibleAlert: false,
+        isVisibleSpinner: false,
+        isDisabledInput: false,
+        isDisabledAddBtn: !valid,
       });
       break;
     case 'empty':
       toggleAdditionItems({
-        visibleAlert: false, visibleSpinner: false, inputDisabled: false, addBtnDisabled: true,
+        isVisibleAlert: false,
+        isVisibleSpinner: false,
+        isDisabledInput: false,
+        isDisabledAddBtn: true,
       });
       break;
     default:
@@ -80,7 +92,9 @@ const renderFeeds = (state) => {
       data-id="${channel.id}">
       <div class="font-weight-bold">${channel.title}
       <div id="spinner" class="spinner-border spinner-border-sm ${channel.status !== 'loading' ? 'd-none' : ''}"
-      role="status"></div></div><small>${channel.description}</small></a>`;
+      role="status"></div>
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="${channel.status !== 'error' ? 'd-none' : ''}"><path d="M0 0h24v24H0z" fill="none"></path><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="red"></path></svg>
+      </div><small>${channel.description}</small></a>`;
     channelsContainer.insertAdjacentHTML('afterbegin', str);
   });
   postsContainer.innerHTML = '';
@@ -97,7 +111,7 @@ const renderFeeds = (state) => {
   });
 };
 
-const parse = (data, id = _.uniqueId()) => {
+const parse = (data, id) => {
   const doc = new DOMParser().parseFromString(data, 'text/xml');
   const channelTitle = doc.querySelector('channel title').textContent;
   const channelDescription = doc.querySelector('channel description').textContent;
@@ -124,7 +138,10 @@ const loadNewPosts = (state, id) => {
       const { posts } = parse(response.data, channel.id);
       return _.difference(posts, channelPosts);
     })
-    .catch((error) => console.log(error));
+    .catch((error) => {
+      channel.status = 'error';
+      console.log(error);
+    });
 };
 
 const app = () => {
@@ -166,7 +183,7 @@ const app = () => {
       .then((response) => {
         const {
           title, description, id, posts,
-        } = parse(response.data);
+        } = parse(response.data, _.uniqueId());
         state.posts = [...state.posts, ...posts];
         state.channels.push({
           id, title, description, url, status: 'idle',
@@ -177,15 +194,17 @@ const app = () => {
           const channel = state.channels.find((el) => el.id === id);
           if (channel.status === 'loading') return;
           channel.status = 'loading';
+          state.additionProcess.status = 'loading';
           loadNewPosts(state, id)
             .then((newPosts) => {
               state.posts = [...newPosts, ...state.posts];
+              channel.status = 'idle';
+              state.additionProcess.status = 'idle';
             })
             .catch((error) => {
+              channel.status = 'error';
+              state.additionProcess.status = 'error';
               console.log(error);
-            })
-            .finally(() => {
-              channel.status = 'idle';
             });
         }, 5000);
       })
