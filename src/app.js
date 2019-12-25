@@ -171,6 +171,22 @@ const app = () => {
       state.additionProcess.valid = isURL(url) && !channels.some((el) => el.url === url);
     }
   });
+  const loadPostsByTimer = (id) => {
+    setTimeout(() => {
+      const channel = state.channels.find((el) => el.id === id);
+      channel.status = 'loading';
+      loadNewPosts(state, id)
+        .then((newPosts) => {
+          state.posts = [...newPosts, ...state.posts];
+          channel.status = 'idle';
+        })
+        .catch((error) => {
+          channel.status = 'error';
+          console.log(error);
+        })
+        .finally(() => loadPostsByTimer(id));
+    }, 5000);
+  };
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const { url } = state.additionProcess;
@@ -187,23 +203,7 @@ const app = () => {
         });
         state.additionProcess.status = 'empty';
         state.activeChannelId = id;
-        setInterval(() => {
-          const channel = state.channels.find((el) => el.id === id);
-          if (channel.status === 'loading') return;
-          channel.status = 'loading';
-          state.additionProcess.status = 'loading';
-          loadNewPosts(state, id)
-            .then((newPosts) => {
-              state.posts = [...newPosts, ...state.posts];
-              channel.status = 'idle';
-              state.additionProcess.status = 'idle';
-            })
-            .catch((error) => {
-              channel.status = 'error';
-              state.additionProcess.status = 'error';
-              console.log(error);
-            });
-        }, 5000);
+        loadPostsByTimer(id);
       })
       .catch((error) => {
         state.additionProcess.status = 'error';
