@@ -108,7 +108,7 @@ const renderFeeds = (state) => {
   });
 };
 
-const parse = (data, id) => {
+const parse = (data) => {
   const doc = new DOMParser().parseFromString(data, 'text/xml');
   const channelTitle = doc.querySelector('channel title').textContent;
   const channelDescription = doc.querySelector('channel description').textContent;
@@ -119,11 +119,11 @@ const parse = (data, id) => {
     const description = post.querySelector('description').textContent;
     const guid = post.querySelector('guid').textContent;
     return {
-      id, title, link, description, guid,
+      title, link, description, guid,
     };
   });
   return {
-    id, title: channelTitle, description: channelDescription, posts,
+    title: channelTitle, description: channelDescription, posts,
   };
 };
 
@@ -132,8 +132,9 @@ const loadNewPosts = (state, id) => {
   const channelPosts = state.posts.filter((el) => el.id === id);
   return axios.get(`https://cors-anywhere.herokuapp.com/${channel.url}`)
     .then((response) => {
-      const { posts } = parse(response.data, channel.id);
-      return _.difference(posts, channelPosts);
+      const { posts } = parse(response.data);
+      const newPosts = posts.map((post) => ({ ...post, id: channel.id }));
+      return _.difference(newPosts, channelPosts);
     })
     .catch((error) => {
       channel.status = 'error';
@@ -195,9 +196,11 @@ const app = () => {
     axios.get(channelURL)
       .then((response) => {
         const {
-          title, description, id, posts,
-        } = parse(response.data, _.uniqueId());
-        state.posts = [...state.posts, ...posts];
+          title, description, posts,
+        } = parse(response.data);
+        const id = _.uniqueId();
+        const newPosts = posts.map((post) => ({ ...post, id }));
+        state.posts = [...state.posts, ...newPosts];
         state.channels.push({
           id, title, description, url, status: 'idle',
         });
