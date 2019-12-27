@@ -16,7 +16,10 @@ const elements = {
 
 const toggleAdditionItems = (config) => {
   const {
-    isVisibleAlert, isVisibleSpinner, isDisabledInput, isDisabledAddBtn,
+    isVisibleAlert = false,
+    isVisibleSpinner = false,
+    isDisabledInput = false,
+    isDisabledAddBtn = false,
   } = config;
   const {
     input, spinner, alert, addBtn,
@@ -43,14 +46,11 @@ const renderAdditionSection = (state) => {
     case 'error':
       toggleAdditionItems({
         isVisibleAlert: true,
-        isVisibleSpinner: false,
-        isDisabledInput: false,
         isDisabledAddBtn: true,
       });
       break;
     case 'loading':
       toggleAdditionItems({
-        isVisibleAlert: false,
         isVisibleSpinner: true,
         isDisabledInput: true,
         isDisabledAddBtn: true,
@@ -58,17 +58,11 @@ const renderAdditionSection = (state) => {
       break;
     case 'idle':
       toggleAdditionItems({
-        isVisibleAlert: false,
-        isVisibleSpinner: false,
-        isDisabledInput: false,
         isDisabledAddBtn: !valid,
       });
       break;
     case 'empty':
       toggleAdditionItems({
-        isVisibleAlert: false,
-        isVisibleSpinner: false,
-        isDisabledInput: false,
         isDisabledAddBtn: true,
       });
       break;
